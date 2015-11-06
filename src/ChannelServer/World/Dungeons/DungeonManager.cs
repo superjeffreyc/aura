@@ -104,12 +104,13 @@ namespace Aura.Channel.World.Dungeons
 		/// <param name="itemId"></param>
 		/// <param name="creature"></param>
 		/// <returns></returns>
-		private Dungeon CreateDungeon(string dungeonName, int itemId, Creature creature)
+		private Dungeon CreateDungeon(string dungeonName, int itemId, Creature creature, out bool newInstance)
 		{
 			Dungeon dungeon;
 			long instanceId = 0;
 			var rnd = RandomProvider.Get();
 			var itemData = AuraData.ItemDb.Find(itemId);
+			newInstance = false;
 
 			// Create new dungeon for passes (includes quest items)
 			if (itemData != null && itemData.HasTag("/dungeon_pass/"))
@@ -125,6 +126,7 @@ namespace Aura.Channel.World.Dungeons
 				{
 					instanceId = this.GetInstanceId();
 					dungeon = new Dungeon(instanceId, dungeonName, itemId, rnd.Next(), rnd.Next(), creature);
+					newInstance = true;
 				}
 				else
 					dungeon = existing;
@@ -294,7 +296,9 @@ namespace Aura.Channel.World.Dungeons
 			{
 				try
 				{
-					var dungeon = this.CreateDungeon(dungeonName, itemId, creature);
+					bool newInstance;
+
+					var dungeon = this.CreateDungeon(dungeonName, itemId, creature, out newInstance);
 					var regionId = dungeon.Regions.First().Id;
 
 					var toWarp = new HashSet<Creature> { creature };
@@ -317,6 +321,13 @@ namespace Aura.Channel.World.Dungeons
 
 						// TODO: This is a bit hacky, needs to be moved to Creature.Warp, with an appropriate check.
 						Send.EntitiesDisappear(member.Client, dungeon.Party);
+					}
+
+					if (!newInstance)
+					{
+						var msg = Localization.Get("This dungeon has been created by another player.");
+						foreach (var member in toWarp.Except(dungeon.Party))
+							Send.MsgBox(member, msg);
 					}
 
 					return true;
