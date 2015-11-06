@@ -286,7 +286,7 @@ namespace Aura.Channel.World.Dungeons
 		/// <param name="dungeonName"></param>
 		/// <param name="itemId"></param>
 		/// <param name="creature"></param>
-		/// <param name="clientEvent"></param>
+		/// <param name="altarEvent"></param>
 		/// <returns></returns>
 		public bool CreateDungeonAndWarp(string dungeonName, int itemId, Creature creature, ClientEvent altarEvent)
 		{
@@ -309,7 +309,7 @@ namespace Aura.Channel.World.Dungeons
 						}
 					}
 
-					// Original creature is always a member of the dungeon party.
+					// Don't use Dungeon.Party as it doesn't work with instances.
 					foreach (var member in toWarp)
 					{
 						var pos = member.GetPosition();
