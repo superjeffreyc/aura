@@ -323,6 +323,13 @@ namespace Aura.Channel.World.Dungeons
 						Send.EntitiesDisappear(member.Client, dungeon.Party);
 					}
 
+					var crawlerText = string.Format(Localization.Get("This dungeon has been created by you or your party. {0}"), dungeon.GetPlayerLocationCrawler());
+
+					foreach (var member in toWarp)
+					{
+						Send.Notice(member, NoticeType.Top, 30000, crawlerText);
+					}
+
 					if (!newInstance)
 					{
 						var msg = Localization.Get("This dungeon has been created by another player.");
