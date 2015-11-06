@@ -710,7 +710,50 @@ namespace Aura.Channel.World.Dungeons
 		/// <returns></returns>
 		public int CountPlayers()
 		{
-			return this.Regions.Sum(a => a.CountPlayers());
+			return this.GetParticipants().Count();
+		}
+
+		/// <summary>
+		/// Returns all players and pets in the dungeon.
+		/// </summary>
+		/// <returns></returns>
+		public IEnumerable<PlayerCreature> GetParticipants()
+		{
+			return this.Regions.SelectMany(r => r.GetAllPlayers().Cast<PlayerCreature>());
+		}
+
+		/// <summary>
+		/// Returns the text for the player location crawler.
+		/// </summary>
+		/// <returns></returns>
+		public string GetPlayerLocationCrawler()
+		{
+			var sb = new StringBuilder(Localization.Get("Players in the dungeon:"));
+
+			var count = 0;
+
+			for (var i = 0; i < this.Regions.Count; i++)
+			{
+				var floorString = i == 0 ? Localization.Get("Lobby") : string.Format(Localization.Get("Floor {0}"), i);
+
+				foreach (var creature in this.Regions[i].GetAllPlayers())
+				{
+					var masterName = "";
+
+					if (creature is Pet && creature.Master != null)
+					{
+						masterName = string.Format(Localization.Get("{0}'s "), creature.Master.Name);
+					}
+
+					sb.AppendFormat(" {0}{1} ({2})...", masterName, creature.Name, floorString);
+
+					count++;
+				}
+			}
+
+			sb.AppendFormat(Localization.Get(" {0} player(s) total."), count);
+
+			return sb.ToString();
 		}
 
 		/// <summary>
