@@ -85,5 +85,10 @@ namespace Aura.Channel.World.Entities
 
 			return false;
 		}
+
+		public bool IsInside(Position p)
+		{
+			return this.IsInside(p.X, p.Y);
+		}
 	}
 }

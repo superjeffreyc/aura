@@ -276,7 +276,7 @@ namespace Aura.Channel.World.Dungeons
 				return false;
 			}
 
-			return this.CreateDungeonAndWarp(dungeonName, item.Info.Id, creature);
+			return this.CreateDungeonAndWarp(dungeonName, item.Info.Id, creature, clientEvent);
 		}
 
 		/// <summary>
@@ -286,8 +286,9 @@ namespace Aura.Channel.World.Dungeons
 		/// <param name="dungeonName"></param>
 		/// <param name="itemId"></param>
 		/// <param name="creature"></param>
+		/// <param name="clientEvent"></param>
 		/// <returns></returns>
-		public bool CreateDungeonAndWarp(string dungeonName, int itemId, Creature creature)
+		public bool CreateDungeonAndWarp(string dungeonName, int itemId, Creature creature, ClientEvent altarEvent)
 		{
 			lock (_createAndCleanUpLock)
 			{
@@ -296,8 +297,20 @@ namespace Aura.Channel.World.Dungeons
 					var dungeon = this.CreateDungeon(dungeonName, itemId, creature);
 					var regionId = dungeon.Regions.First().Id;
 
+					var toWarp = new HashSet<Creature> { creature };
+
+					if (creature.Party != null)
+					{
+						foreach (var member in creature.Party.GetMembersInRegion(creature))
+						{
+							var p = member.GetPosition();
+							if (altarEvent.IsInside(p))
+								toWarp.Add(member);
+						}
+					}
+
 					// Original creature is always a member of the dungeon party.
-					foreach (var member in dungeon.Party)
+					foreach (var member in toWarp)
 					{
 						var pos = member.GetPosition();
 						member.Warp(regionId, pos);
