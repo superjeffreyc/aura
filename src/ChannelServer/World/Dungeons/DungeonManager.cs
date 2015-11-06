@@ -281,7 +281,7 @@ namespace Aura.Channel.World.Dungeons
 
 		/// <summary>
 		/// Creates a dungeon with the given parameters and warps the creature's
-		/// party inside.
+		/// party inside. If AltarEvent is not null, only creatures in that event area are warped.
 		/// </summary>
 		/// <param name="dungeonName"></param>
 		/// <param name="itemId"></param>
@@ -304,7 +304,7 @@ namespace Aura.Channel.World.Dungeons
 						foreach (var member in creature.Party.GetMembersInRegion(creature))
 						{
 							var p = member.GetPosition();
-							if (altarEvent.IsInside(p))
+							if (altarEvent == null || altarEvent.IsInside(p))
 								toWarp.Add(member);
 						}
 					}

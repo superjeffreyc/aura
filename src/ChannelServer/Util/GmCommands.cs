@@ -1614,7 +1614,7 @@ namespace Aura.Channel.Util
 				return CommandResult.InvalidArgument;
 			}
 
-			if (!ChannelServer.Instance.World.DungeonManager.CreateDungeonAndWarp(dungeonName, itemId, target))
+			if (!ChannelServer.Instance.World.DungeonManager.CreateDungeonAndWarp(dungeonName, itemId, target, null))
 			{
 				Send.SystemMessage(sender, Localization.Get("Failed to create dungeon."), dungeonName);
 				return CommandResult.Fail;
