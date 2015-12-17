@@ -5,6 +5,13 @@ using System.Collections.Generic;
 using Aura.Login.Database;
 using Aura.Shared.Util;
 using Aura.Shared.Util.Commands;
+using System;
+using System.Diagnostics;
+using Aura.Login.Network;
+using Aura.Shared.Network;
+using Aura.Mabi.Network;
+using Aura.Mabi.Const;
+using System.Threading;
 
 namespace Aura.Login.Util
 {
@@ -12,19 +19,39 @@ namespace Aura.Login.Util
 	{
 		public LoginConsoleCommands()
 		{
-			this.Add("shutdown", "Orders all servers to shut down", HandleShutDown);
+			this.Add("shutdown", "<seconds>", "Orders all servers to shut down", HandleShutDown);
 			this.Add("auth", "<account> <level>", "Changes authority level of account", HandleAuth);
 			this.Add("passwd", "<account> <password>", "Changes password of account", HandlePasswd);
 		}
 
 		private CommandResult HandleShutDown(string command, IList<string> args)
-		{
-			Log.Info("(Unimplemented)");
+        {
+            int time = 0;
 
-			return CommandResult.Okay;
+            if (args.Count < 2)
+                return CommandResult.InvalidArgument;
+
+            // Get time
+            if (!int.TryParse(args[1], out time))
+                return CommandResult.InvalidArgument;
+
+            // TODO: (Enhancement) If there is no ChannelServer running, refuse shutdown command
+            
+            // Set minimum time to 1 minute (60 seconds)
+            if (time < 60)
+                time = 60;
+
+            // Cap time to 30 min (1800 seconds)
+            if (time > 1800)
+                time = 1800;
+
+            // Shutdown preparation
+            LoginServer.Instance.BroadcastChannels(new Packet(Op.RequestClientDisconnect, MabiId.Channel).PutInt(0).PutInt(time));
+         
+            return CommandResult.Okay;
 		}
 
-		private CommandResult HandleAuth(string command, IList<string> args)
+        private CommandResult HandleAuth(string command, IList<string> args)
 		{
 			if (args.Count < 3)
 				return CommandResult.InvalidArgument;
