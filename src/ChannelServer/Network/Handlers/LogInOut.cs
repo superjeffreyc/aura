@@ -30,15 +30,15 @@ namespace Aura.Channel.Network.Handlers
 		[PacketHandler(Op.ChannelLogin)]
 		public void ChannelLogin(ChannelClient client, Packet packet)
 		{
-            // Refuse connection if the ChannelServer is currently shutting down
-            if (ChannelServer.Instance.ShuttingDown)
-            {
-                Log.Info("Refused connection because the server is currently shutting down.");
-                client.Kill();
-                return;
-            }
+			// Refuse connection if the ChannelServer is currently shutting down
+			if (ChannelServer.Instance.ShuttingDown)
+			{
+				Log.Info("Refused connection because the server is currently shutting down.");
+				client.Kill();
+				return;
+			}
 
-            var accountId = packet.GetString();
+            		var accountId = packet.GetString();
 			// [160XXX] Double account name
 			{
 				packet.GetString();
@@ -294,10 +294,10 @@ namespace Aura.Channel.Network.Handlers
 			Log.Info("'{0}' is closing the connection. Saving...", client.Account.Id);
 			client.CleanUp();
 
-            Send.ChannelDisconnectR(client);
+            		Send.ChannelDisconnectR(client);
 		}
 
-        /// <summary>
+        	/// <summary>
 		/// Disconnect clients.
 		/// </summary>
 		/// <remarks>
@@ -307,76 +307,76 @@ namespace Aura.Channel.Network.Handlers
 		/// ...
 		/// </example>
 		[PacketHandler(Op.RequestClientDisconnect)]
-        public void RequestClientDisconnect(ChannelClient client, Packet packet)
-        {
+	        public void RequestClientDisconnect(ChannelClient client, Packet packet)
+	        {
+	
+	            // i = 0 --> Preparations for shutdown
+	
+	            int i = packet.GetInt();
+	            int time = packet.GetInt();
+	
+	            if (i == 0)
+	            {
+	                if (!ChannelServer.Instance.ShuttingDown)
+	                {
+	                    Send.Internal_Broadcast("The server will be brought down for maintenance in " + time + " seconds. Please log out safely before then.");
+	
+	                    ChannelServer.Instance.ShuttingDown = true;
+	
+	                    // Send MsgBox to all users
+	                    foreach (var user in ChannelServer.Instance.Server.Clients)
+	                    {
+	                        Send.MsgBox(user.GetControlledCreatureSafe(), "You will be logged out automatically in {0} seconds.", time);
+	                    }
+	
+	                    Log.Info("Shutting down in {0} seconds...", time);
+	                    this.StartShutdownTimer(time * 1000);
+	                }
+	                else
+	                {
+	                    Log.Info("There was an attempt to shutdown this channel while it is already shutting down.");
+	                }
+	            }
+	            else
+	            {
+	                Log.Info("RequestClientDisconnect: Unknown value found in packet");
+	            }
 
-            // i = 0 --> Preparations for shutdown
+        	}
 
-            int i = packet.GetInt();
-            int time = packet.GetInt();
-
-            if (i == 0)
-            {
-                if (!ChannelServer.Instance.ShuttingDown)
-                {
-                    Send.Internal_Broadcast("The server will be brought down for maintenance in " + time + " seconds. Please log out safely before then.");
-
-                    ChannelServer.Instance.ShuttingDown = true;
-
-                    // Send MsgBox to all users
-                    foreach (var user in ChannelServer.Instance.Server.Clients)
-                    {
-                        Send.MsgBox(user.GetControlledCreatureSafe(), "You will be logged out automatically in {0} seconds.", time);
-                    }
-
-                    Log.Info("Shutting down in {0} seconds...", time);
-                    this.StartShutdownTimer(time * 1000);
-                }
-                else
-                {
-                    Log.Info("There was an attempt to shutdown this channel while it is already shutting down.");
-                }
-            }
-            else
-            {
-                Log.Info("RequestClientDisconnect: Unknown value found in packet");
-            }
-
-        }
-
-        public void StartShutdownTimer(int timeUntilShutdown)
-        {
-            Timer t = new Timer(new TimerCallback(TimerDone));
-            t.Change(timeUntilShutdown, 0);
-        }
-
-        private void TimerDone(object timer)
-        {
-            Timer t = (Timer)timer;
-            t.Dispose();
-
-            // Save all client data and kill
-            foreach (var user in ChannelServer.Instance.Server.Clients)
-            {
-                Log.Info("Closing the connection to '{0}'...", user.Account.Id);
-                user.CleanUp();
-                user.Kill();
-            }
-
-            // Close the ChannelServer
-            CliUtil.Exit(0, false);
-        }
-
-        /// <summary>
-        /// Sent when entering the Soul Stream.
-        /// </summary>
-        /// <remarks>
-        /// Purpose unknown, no answer sent in logs.
-        /// </remarks>
-        /// <example>
-        /// No parameters.
-        /// </example>
-        [PacketHandler(Op.EnterSoulStream)]
+	        public void StartShutdownTimer(int timeUntilShutdown)
+	        {
+	            Timer t = new Timer(new TimerCallback(TimerDone));
+	            t.Change(timeUntilShutdown, 0);
+	        }
+	
+	        private void TimerDone(object timer)
+	        {
+	            Timer t = (Timer)timer;
+	            t.Dispose();
+	
+	            // Save all client data and kill
+	            foreach (var user in ChannelServer.Instance.Server.Clients)
+	            {
+	                Log.Info("Closing the connection to '{0}'...", user.Account.Id);
+	                user.CleanUp();
+	                user.Kill();
+	            }
+	
+	            // Close the ChannelServer
+	            CliUtil.Exit(0, false);
+	        }
+	
+	        /// <summary>
+	        /// Sent when entering the Soul Stream.
+	        /// </summary>
+	        /// <remarks>
+	        /// Purpose unknown, no answer sent in logs.
+	        /// </remarks>
+	        /// <example>
+	        /// No parameters.
+	        /// </example>
+	        [PacketHandler(Op.EnterSoulStream)]
 		public void EnterSoulStream(ChannelClient client, Packet packet)
 		{
 		}
