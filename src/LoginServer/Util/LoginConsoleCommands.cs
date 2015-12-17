@@ -25,33 +25,33 @@ namespace Aura.Login.Util
 		}
 
 		private CommandResult HandleShutDown(string command, IList<string> args)
-        {
-            int time = 0;
-
-            if (args.Count < 2)
-                return CommandResult.InvalidArgument;
-
-            // Get time
-            if (!int.TryParse(args[1], out time))
-                return CommandResult.InvalidArgument;
-
-            // TODO: (Enhancement) If there is no ChannelServer running, refuse shutdown command
-            
-            // Set minimum time to 1 minute (60 seconds)
-            if (time < 60)
-                time = 60;
-
-            // Cap time to 30 min (1800 seconds)
-            if (time > 1800)
-                time = 1800;
-
-            // Shutdown preparation
-            LoginServer.Instance.BroadcastChannels(new Packet(Op.RequestClientDisconnect, MabiId.Channel).PutInt(0).PutInt(time));
-         
-            return CommandResult.Okay;
+	        {
+	            int time = 0;
+	
+	            if (args.Count < 2)
+	                return CommandResult.InvalidArgument;
+	
+	            // Get time
+	            if (!int.TryParse(args[1], out time))
+	                return CommandResult.InvalidArgument;
+	
+	            // TODO: (Enhancement) If there is no ChannelServer running, refuse shutdown command
+	            
+	            // Set minimum time to 1 minute (60 seconds)
+	            if (time < 60)
+	                time = 60;
+	
+	            // Cap time to 30 min (1800 seconds)
+	            if (time > 1800)
+	                time = 1800;
+	
+	            // Shutdown preparation
+	            LoginServer.Instance.BroadcastChannels(new Packet(Op.RequestClientDisconnect, MabiId.Channel).PutInt(0).PutInt(time));
+	         
+	            return CommandResult.Okay;
 		}
-
-        private CommandResult HandleAuth(string command, IList<string> args)
+	
+	        private CommandResult HandleAuth(string command, IList<string> args)
 		{
 			if (args.Count < 3)
 				return CommandResult.InvalidArgument;
