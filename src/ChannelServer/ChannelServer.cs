@@ -70,7 +70,7 @@ namespace Aura.Channel
 		public PartyManager PartyManager { get; private set; }
 
 		public WorldManager World { get; private set; }
-        	public bool ShuttingDown { get; set; }
+		public bool ShuttingDown { get; set; }
 
 		private ChannelServer()
 		{
@@ -157,60 +157,60 @@ namespace Aura.Channel
 			if (this.LoginServer != null && this.LoginServer.State == ClientState.LoggedIn)
 				throw new Exception("Channel already connected to login server.");
 
-            		Log.WriteLine();
+					Log.WriteLine();
 
-            		if (firstTime)
-                		Log.Info("Trying to connect to login server at {0}:{1}...", ChannelServer.Instance.Conf.Channel.LoginHost, ChannelServer.Instance.Conf.Channel.LoginPort);
-            		else
-            		{
-                	Log.Info("Trying to re-connect to login server in {0} seconds.", LoginTryTime / 1000);
-                	Thread.Sleep(LoginTryTime);
-            		}
+					if (firstTime)
+						Log.Info("Trying to connect to login server at {0}:{1}...", ChannelServer.Instance.Conf.Channel.LoginHost, ChannelServer.Instance.Conf.Channel.LoginPort);
+					else
+					{
+					Log.Info("Trying to re-connect to login server in {0} seconds.", LoginTryTime / 1000);
+					Thread.Sleep(LoginTryTime);
+					}
 
-            		var success = false;
-            		while (!success)
-            		{   
-                		try
-		                {
-		                    if (this.LoginServer != null && this.LoginServer.State != ClientState.Dead)
-		                        this.LoginServer.Kill();
+					var success = false;
+					while (!success)
+					{
+						try
+						{
+							if (this.LoginServer != null && this.LoginServer.State != ClientState.Dead)
+								this.LoginServer.Kill();
 
-		                    this.LoginServer = new InternalClient();
-		                    this.LoginServer.Socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-		                    this.LoginServer.Socket.Connect(ChannelServer.Instance.Conf.Channel.LoginHost, ChannelServer.Instance.Conf.Channel.LoginPort);
+							this.LoginServer = new InternalClient();
+							this.LoginServer.Socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+							this.LoginServer.Socket.Connect(ChannelServer.Instance.Conf.Channel.LoginHost, ChannelServer.Instance.Conf.Channel.LoginPort);
 		
-		                    var buffer = new byte[255];
+							var buffer = new byte[255];
 		
-		                    // Recv Seed, send back empty packet to get done with the challenge.
-		                    this.LoginServer.Socket.Receive(buffer);
-		                    this.LoginServer.Crypto = new MabiCrypto(BitConverter.ToUInt32(buffer, 0), false);
-		                    this.LoginServer.Send(Packet.Empty());
+							// Recv Seed, send back empty packet to get done with the challenge.
+							this.LoginServer.Socket.Receive(buffer);
+							this.LoginServer.Crypto = new MabiCrypto(BitConverter.ToUInt32(buffer, 0), false);
+							this.LoginServer.Send(Packet.Empty());
 		
-		                    // Challenge end
-		                    this.LoginServer.Socket.Receive(buffer);
+							// Challenge end
+							this.LoginServer.Socket.Receive(buffer);
 		
-		                    // Inject login server into normal data receiving.
-		                    this.Server.AddReceivingClient(this.LoginServer);
+							// Inject login server into normal data receiving.
+							this.Server.AddReceivingClient(this.LoginServer);
 		
-		                    // Identify
-		                    this.LoginServer.State = ClientState.LoggingIn;
+							// Identify
+							this.LoginServer.State = ClientState.LoggingIn;
 		
-		                    success = true;
+							success = true;
 		
-		                    Send.Internal_ServerIdentify();
-		                }
-		                catch (Exception ex)
-		                {
-		                    Log.Error("Unable to connect to login server. ({0})", ex.Message);
-		                    Log.Info("Trying again in {0} seconds.", LoginTryTime / 1000);
-		                    Thread.Sleep(LoginTryTime);
-		                }
-		                
-	            }
+							Send.Internal_ServerIdentify();
+						}
+						catch (Exception ex)
+						{
+							Log.Error("Unable to connect to login server. ({0})", ex.Message);
+							Log.Info("Trying again in {0} seconds.", LoginTryTime / 1000);
+							Thread.Sleep(LoginTryTime);
+						}
+						
+				}
 	
-	            Log.Info("Connection to login server at '{0}' established.", this.LoginServer.Address);
-	            Log.WriteLine();
-            
+				Log.Info("Connection to login server at '{0}' established.", this.LoginServer.Address);
+				Log.WriteLine();
+			
 		}
 
 		private void OnClientDisconnected(ChannelClient client)
@@ -298,5 +298,5 @@ namespace Aura.Channel
 			}
 		}
 
-    }
+	}
 }
