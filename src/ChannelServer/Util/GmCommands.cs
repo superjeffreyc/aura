@@ -1896,7 +1896,8 @@ namespace Aura.Channel.Util
 			// Send MsgBox to all users
 			foreach (var user in ChannelServer.Instance.Server.Clients)
 			{
-				try {
+				try
+				{
 					Send.MsgBox(user.GetControlledCreatureSafe(), "You will be logged out automatically in {0} seconds.", time);
 				}
 				catch (Exception e)

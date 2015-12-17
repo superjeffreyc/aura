@@ -38,7 +38,7 @@ namespace Aura.Channel.Network.Handlers
 				return;
 			}
 
-					var accountId = packet.GetString();
+			var accountId = packet.GetString();
 			// [160XXX] Double account name
 			{
 				packet.GetString();
@@ -294,10 +294,10 @@ namespace Aura.Channel.Network.Handlers
 			Log.Info("'{0}' is closing the connection. Saving...", client.Account.Id);
 			client.CleanUp();
 
-					Send.ChannelDisconnectR(client);
+			Send.ChannelDisconnectR(client);
 		}
 
-			/// <summary>
+		/// <summary>
 		/// Disconnect clients.
 		/// </summary>
 		/// <remarks>
