@@ -1950,6 +1950,6 @@ namespace Aura.Channel.Util
 			this.CharAuth = charAuth;
 		}
 	}
-
+	
 	public delegate CommandResult GmCommandFunc(ChannelClient client, Creature sender, Creature target, string message, IList<string> args);
 }
