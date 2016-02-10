@@ -45,7 +45,7 @@ namespace Aura.Channel
 		public bool IsRunning
 		{
 			get { return _isRunning; }
-			private set { _isRunning = true; }
+			private set { _isRunning = value; }
 		}
 
 		private bool _isInMaintenance = false;
