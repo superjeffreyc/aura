@@ -21,6 +21,8 @@ using Aura.Shared.Util.Configuration;
 using System;
 using System.Net.Sockets;
 using System.Threading;
+using System.Timers;
+using Aura.Mabi.Const;
 
 namespace Aura.Channel
 {
@@ -33,34 +35,36 @@ namespace Aura.Channel
 		/// </summary>
 		private const int LoginTryTime = 10 * 1000;
 
+		private System.Timers.Timer _shutdownTimer = null;
+
 		private bool _isRunning = false;
 
-        /// <summary>
-        /// Used to determine if the server is running
-        /// </summary>
-	    public bool IsRunning
-	    {
-	        get { return _isRunning; }
-            private set { _isRunning = true; }
-	    }
+		/// <summary>
+		/// Used to determine if the server is running
+		/// </summary>
+		public bool IsRunning
+		{
+			get { return _isRunning; }
+			private set { _isRunning = true; }
+		}
 
-	    private bool _isInMaintenance = false;
+		private bool _isInMaintenance = false;
 
-        /// <summary>
-        /// Can be used to set the server into maintenance
-        /// </summary>
-	    public bool IsInMaintenance
-	    {
-	        get
-	        {
-	            return _isInMaintenance;            
-	        }
-	        set
-	        {
-	            _isInMaintenance = value;
-	            Send.Internal_ChannelStatus();
-	        }
-	    }
+		/// <summary>
+		/// Can be used to set the server into maintenance
+		/// </summary>
+		public bool IsInMaintenance
+		{
+			get
+			{
+				return _isInMaintenance;            
+			}
+			set
+			{
+				_isInMaintenance = value;
+				Send.Internal_ChannelStatus();
+			}
+		}
 
 		/// <summary>
 		/// Instance of the actual server component.
@@ -124,8 +128,10 @@ namespace Aura.Channel
 		/// </summary>
 		public void Run()
 		{
-			if (_isRunning)
+			if (this.IsRunning)
 				throw new Exception("Server is already running.");
+
+			this.IsInMaintenance = true;
 
 			CliUtil.WriteHeader("Channel Server", ConsoleColor.DarkGreen);
 			CliUtil.LoadingTitle();
@@ -169,7 +175,7 @@ namespace Aura.Channel
 
 			CliUtil.RunningTitle();
 			this.IsRunning = true;
-		    this.IsInMaintenance = true;
+			this.IsInMaintenance = false;
 
 			// Commands
 			this.ConsoleCommands.Wait();
@@ -236,6 +242,57 @@ namespace Aura.Channel
 
 			Log.Info("Connection to login server at '{0}' established.", this.LoginServer.Address);
 			Log.WriteLine();
+		}
+
+		public ShutdownResult Shutdown(int time)
+		{
+			if (_shutdownTimer != null)
+				return ShutdownResult.AlreadyInProgress;
+
+			var channel = this.ServerList.GetChannel(this.Conf.Channel.ChannelServer, this.Conf.Channel.ChannelName);
+
+			if (channel == null)
+			{
+				Log.Warning("Attempted to shutdown unregistered channel.");
+				return ShutdownResult.Fail;
+			}
+
+			Send.Notice(NoticeType.TopRed, Localization.Get("Channel channel is being shut down in {0} seconds, please log off as soon as possible."), time);
+
+			// Sets ChannelState to Maint and notifies LoginServer
+			this.IsInMaintenance = true;
+			Log.Info("Switched to maintenance.");
+
+			_shutdownTimer = new System.Timers.Timer(time * 1000);
+
+			_shutdownTimer.Elapsed += ShutdownTimerOnElapsed;
+
+			_shutdownTimer.Start();
+
+			// TODO: Remove magic numbah
+			// Disconnect a little earlier
+			Send.RequestClientDisconnect(time - 30);
+
+			Log.Info("Shutting down in {0} seconds...", time);
+
+			return ShutdownResult.Success;
+		}
+
+		private void ShutdownTimerOnElapsed(object sender, ElapsedEventArgs elapsedEventArgs)
+		{   
+			Log.Info("Shutting Down...");
+
+			this.Database.SaveVars("Aura System", 0, this.ScriptManager.GlobalVars.Perm);
+
+			lock (this.Server.Clients)
+			{
+				foreach (var channelClient in this.Server.Clients)
+				{
+					channelClient.Kill();                 
+				}
+			}
+
+			CliUtil.Exit(0, false);
 		}
 
 		private void OnClientDisconnected(ChannelClient client)

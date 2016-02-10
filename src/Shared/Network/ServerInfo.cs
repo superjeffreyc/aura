@@ -89,6 +89,13 @@ namespace Aura.Shared.Network
 		}
 	}
 
+	public enum ShutdownResult
+	{
+		Success,
+		Fail,
+		AlreadyInProgress
+	}
+
 	public enum ChannelState
 	{
 		/// <summary>

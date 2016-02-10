@@ -100,6 +100,7 @@ namespace Aura.Channel.Util
 			Add(99, 99, "closenpc", "", HandleCloseNpc);
 			Add(99, 99, "nosave", "", HandleNoSave);
 			Add(99, 99, "dbgregion", "[scale=20] [entityIds]", HandleDebugRegion);
+			Add(99, -1, "shutdown", "[seconds=60]", HandleShutdown);
 
 			// Aliases
 			AddAlias("item", "drop");
@@ -2109,6 +2110,34 @@ namespace Aura.Channel.Util
 			}
 
 			return CommandResult.Okay;
+		}
+
+		private CommandResult HandleShutdown(ChannelClient client, Creature sender, Creature target, string message, IList<string> args)
+		{
+			var time = 60;
+
+			if (args.Count == 2)
+				int.TryParse(args[1], out time);
+
+			var result = ChannelServer.Instance.Shutdown(time);
+
+			switch (result)
+			{
+				case ShutdownResult.Success:
+					Send.ServerMessage(sender, Localization.Get("Shutdown request: Success."));
+					break;
+				case ShutdownResult.AlreadyInProgress:
+					Send.ServerMessage(sender, Localization.Get("Shutdown request: Already in progress."));
+					break;
+				case ShutdownResult.Fail:
+					Send.ServerMessage(sender, Localization.Get("Shutdown request: Failed."));
+					break;
+				default:
+					Send.ServerMessage(sender, Localization.Get("Shutdown request: Unknown response."));
+					break;
+			}
+			return CommandResult.Okay;
+
 		}
 	}
 

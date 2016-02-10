@@ -43,6 +43,12 @@ namespace Aura.Channel.Network.Sending
 			client.Send(packet);
 		}
 
+		public static void RequestClientDisconnect(int seconds)
+		{
+			ChannelServer.Instance.World.Broadcast(
+					new Packet(Op.RequestClientDisconnect, MabiId.Channel).PutInt(seconds * 1000));
+		}
+
 		/// <summary>
 		/// Sends SpecialLogin to creature's client.
 		/// </summary>

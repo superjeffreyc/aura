@@ -41,29 +41,46 @@ namespace Aura.Channel.Network.Sending
 			ChannelServer.Instance.LoginServer.Send(packet);
 		}
 
-        /// <summary>
-        /// Calculates the state of the channel based off of several factors
-        /// </summary>
-        /// <param name="current"></param>
-        /// <param name="max"></param>
-        /// <returns></returns>
-	    private static ChannelState GetServerState(int current, int max)
-	    {
-	        if (ChannelServer.Instance.IsInMaintenance)
-                // In case we do support the booting channel state
-                return ChannelServer.Instance.IsRunning ? ChannelState.Maintenance : ChannelState.Booting;
+		/// <summary>
+		/// Calculates the state of the channel based off of several factors
+		/// </summary>
+		/// <param name="current"></param>
+		/// <param name="max"></param>
+		/// <returns></returns>
+		private static ChannelState GetServerState(int current, int max)
+		{
+			if (ChannelServer.Instance.IsInMaintenance)
+				// In case we do support the booting channel state
+				return ChannelServer.Instance.IsRunning ? ChannelState.Maintenance : ChannelState.Booting;
 
-            var stress = (current / max) * 100;
+			var stress = (current / max) * 100;
 
-            if (stress > 40 && stress <= 70)
-                return ChannelState.Busy;
-            if (stress > 70 && stress <= 95)
-                return ChannelState.Full;
-            if (stress > 95)
-                return ChannelState.Bursting;
+			if (stress > 40 && stress <= 70)
+				return ChannelState.Busy;
+			if (stress > 70 && stress <= 95)
+				return ChannelState.Full;
+			if (stress > 95)
+				return ChannelState.Bursting;
 
-            return ChannelState.Normal;
-        }
+			return ChannelState.Normal;
+		}
+
+		public static void Internal_ChannelShutdownR(ChannelClient client, ShutdownResult result)
+		{
+			var packet = new Packet(Op.Internal.ChannelShutdownR, 0);
+			packet.PutByte((byte)result);
+
+			client.Send(packet);
+		}
+
+
+		/// <summary>
+		/// Sends Internal.Broadcast to login server.
+		/// </summary>
+		public static void Internal_Broadcast(string format, params object[] args)
+		{
+			Internal_Broadcast(string.Format(format, args));
+		}
 
 		/// <summary>
 		/// Sends Internal.Broadcast to login server.

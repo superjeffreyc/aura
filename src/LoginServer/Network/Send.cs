@@ -439,6 +439,19 @@ namespace Aura.Login.Network
 		}
 
 		/// <summary>
+		/// Sends a shutdown request to channel with time in seconds
+		/// </summary>
+		/// <param name="client"></param>
+		/// <param name="time"></param>
+		public static void Internal_ChannelShutdown(LoginClient client, int time = 60)
+		{
+			var packet = new Packet(Op.Internal.ChannelShutdown, MabiId.Login);
+			packet.PutInt(time);
+
+			client.Send(packet);
+		}
+
+		/// <summary>
 		/// Sends server/channel status update to all connected channels.
 		/// </summary>
 		public static void Internal_ChannelStatus(ICollection<ServerInfo> serverList)
