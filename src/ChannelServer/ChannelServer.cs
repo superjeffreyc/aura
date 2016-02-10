@@ -21,6 +21,8 @@ using Aura.Shared.Util.Configuration;
 using System;
 using System.Net.Sockets;
 using System.Threading;
+using System.Timers;
+using Aura.Mabi.Const;
 
 namespace Aura.Channel
 {
@@ -33,7 +35,30 @@ namespace Aura.Channel
 		/// </summary>
 		private const int LoginTryTime = 10 * 1000;
 
-		private bool _running = false;
+		private System.Timers.Timer _shutdownTimer = null;
+
+		/// <summary>
+		/// Used to determine if the server is running
+		/// </summary>
+		public bool IsRunning { get; private set; } = false;
+
+		private bool _isInMaintenance = false;
+
+		/// <summary>
+		/// Can be used to set the server into maintenance
+		/// </summary>
+		public bool IsInMaintenance
+		{
+			get
+			{
+				return _isInMaintenance;            
+			}
+			set
+			{
+				_isInMaintenance = value;
+				Send.Internal_ChannelStatus();
+			}
+		}
 
 		/// <summary>
 		/// Instance of the actual server component.
@@ -97,7 +122,7 @@ namespace Aura.Channel
 		/// </summary>
 		public void Run()
 		{
-			if (_running)
+			if (this.IsRunning)
 				throw new Exception("Server is already running.");
 
 			CliUtil.WriteHeader("Channel Server", ConsoleColor.DarkGreen);
@@ -141,7 +166,8 @@ namespace Aura.Channel
 			this.StartStatusUpdateTimer();
 
 			CliUtil.RunningTitle();
-			_running = true;
+			this.IsRunning = true;
+			this.IsInMaintenance = false;
 
 			// Commands
 			this.ConsoleCommands.Wait();
@@ -208,6 +234,80 @@ namespace Aura.Channel
 
 			Log.Info("Connection to login server at '{0}' established.", this.LoginServer.Address);
 			Log.WriteLine();
+		}
+
+		/// <summary>
+		/// Attempts to start a shutdown sequence for the server
+		/// </summary>
+		/// <param name="time">The amount of time in seconds the server should wait before shutting down</param>
+		/// <returns></returns>
+		public ShutdownResult Shutdown(int time)
+		{
+			var disconnectOffset = 30;
+
+			var channel = this.ServerList.GetChannel(this.Conf.Channel.ChannelServer, this.Conf.Channel.ChannelName);
+
+			if (channel == null)
+			{
+				Log.Warning("Attempted to shutdown unregistered channel.");
+				return ShutdownResult.Fail;
+			}
+
+			if (_shutdownTimer != null && _shutdownTimer.Enabled)
+				return ShutdownResult.AlreadyInProgress;
+
+			try
+			{
+				_shutdownTimer = new System.Timers.Timer(time * 1000);
+			}
+			catch (ArgumentException ex)
+			{
+				Log.Error(ex.Message);
+				return ShutdownResult.Fail;
+			}
+
+			_shutdownTimer.Elapsed += this.ShutdownTimerOnElapsed;
+
+			try
+			{
+				_shutdownTimer.Start();
+			}
+			catch (ArgumentOutOfRangeException ex)
+			{
+				Log.Error(ex.Message);
+				return ShutdownResult.Fail;
+			}
+
+			Send.Notice(NoticeType.TopRed,
+				Localization.Get("Channel will shut down in {0} seconds, please log off as soon as possible."), time);
+
+			// Sets ChannelState to Maint and notifies LoginServer
+			this.IsInMaintenance = true;
+			Log.Info("Switched to maintenance.");
+
+			// Disconnect a little earlier
+			Send.RequestClientDisconnect(time - disconnectOffset);
+
+			Log.Info("Shutting down in {0} seconds...", time);
+
+			return ShutdownResult.Success;
+		}
+
+		private void ShutdownTimerOnElapsed(object sender, ElapsedEventArgs elapsedEventArgs)
+		{   
+			Log.Info("Shutting Down...");
+
+			this.Database.SaveVars("Aura System", 0, this.ScriptManager.GlobalVars.Perm);
+
+			lock (this.Server.Clients)
+			{
+				foreach (var channelClient in this.Server.Clients)
+				{
+					channelClient.Kill();                 
+				}
+			}
+
+			CliUtil.Exit(0, false);
 		}
 
 		private void OnClientDisconnected(ChannelClient client)
