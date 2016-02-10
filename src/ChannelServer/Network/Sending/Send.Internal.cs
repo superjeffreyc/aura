@@ -42,8 +42,12 @@ namespace Aura.Channel.Network.Sending
 		}
 
 		/// <summary>
-		/// Calculates the state of the channel based off of several factors
+		/// Calculates the state of the channel.
 		/// </summary>
+		/// <remarks>
+		/// When calculating the <see cref="ChannelState"/> we take into account
+		/// whether the server is running as well as if it is in Maintenance.
+		/// </remarks>
 		/// <param name="current"></param>
 		/// <param name="max"></param>
 		/// <returns></returns>

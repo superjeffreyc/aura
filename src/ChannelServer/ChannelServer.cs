@@ -246,7 +246,9 @@ namespace Aura.Channel
 
 		public ShutdownResult Shutdown(int time)
 		{
-			if (_shutdownTimer != null)
+			int logoffOffset = 30;
+
+			if (_shutdownTimer != null && _shutdownTimer.Enabled)
 				return ShutdownResult.AlreadyInProgress;
 
 			var channel = this.ServerList.GetChannel(this.Conf.Channel.ChannelServer, this.Conf.Channel.ChannelName);
@@ -257,7 +259,8 @@ namespace Aura.Channel
 				return ShutdownResult.Fail;
 			}
 
-			Send.Notice(NoticeType.TopRed, Localization.Get("Channel channel is being shut down in {0} seconds, please log off as soon as possible."), time);
+			Send.Notice(NoticeType.TopRed, 
+				Localization.Get("Channel will shut down in {0} seconds, please log off as soon as possible."), time);
 
 			// Sets ChannelState to Maint and notifies LoginServer
 			this.IsInMaintenance = true;
@@ -269,9 +272,8 @@ namespace Aura.Channel
 
 			_shutdownTimer.Start();
 
-			// TODO: Remove magic numbah
 			// Disconnect a little earlier
-			Send.RequestClientDisconnect(time - 30);
+			Send.RequestClientDisconnect(time - logoffOffset);
 
 			Log.Info("Shutting down in {0} seconds...", time);
 

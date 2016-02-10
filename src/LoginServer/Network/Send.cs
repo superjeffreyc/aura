@@ -439,14 +439,14 @@ namespace Aura.Login.Network
 		}
 
 		/// <summary>
-		/// Sends a shutdown request to channel with time in seconds
+		/// Sends a shutdown request to the channel.
 		/// </summary>
 		/// <param name="client"></param>
-		/// <param name="time"></param>
-		public static void Internal_ChannelShutdown(LoginClient client, int time = 60)
+		/// <param name="shutdownSeconds">Time in seconds in which the channel should wait to close.</param>
+		public static void Internal_ChannelShutdown(LoginClient client, int shutdownSeconds = 60)
 		{
 			var packet = new Packet(Op.Internal.ChannelShutdown, MabiId.Login);
-			packet.PutInt(time);
+			packet.PutInt(shutdownSeconds);
 
 			client.Send(packet);
 		}
