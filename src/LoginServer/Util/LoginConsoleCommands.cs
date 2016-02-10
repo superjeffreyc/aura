@@ -62,36 +62,36 @@ namespace Aura.Login.Util
 			return CommandResult.Okay;
 		}
 
-	    private CommandResult HandleShutDown(string command, IList<string> args)
-	    {
-	        var time = 60;
+		private CommandResult HandleShutDown(string command, IList<string> args)
+		{
+			var time = 60;
 
-	        if (args.Count == 3)
-	        {
-                int.TryParse(args[2], out time);
-            }
-	            
-	        var channelFullName = args[1];
+			if (args.Count == 3)
+			{
+				int.TryParse(args[2], out time);
+			}
+				
+			var channelFullName = args[1];
 
-	        if (channelFullName == "*")
-	        {
-	            foreach (var channelClient in LoginServer.Instance.ChannelClients)
-	            {
-	                Send.Internal_ChannelShutdown(channelClient, time);
-	            }
+			if (channelFullName == "*")
+			{
+				foreach (var channelClient in LoginServer.Instance.ChannelClients)
+				{
+					Send.Internal_ChannelShutdown(channelClient, time);
+				}
 
-                return CommandResult.Okay;
-	        }
+				return CommandResult.Okay;
+			}
 
-            var channel = LoginServer.Instance.ChannelClients.FirstOrDefault(c => c.Account.Name == channelFullName);
-            if (channel == null)
-	        {
-                Log.Info("channel {0}@{1} does not exist.");
-                return CommandResult.InvalidArgument;
-            }
+			var channel = LoginServer.Instance.ChannelClients.FirstOrDefault(c => c.Account.Name == channelFullName);
+			if (channel == null)
+			{
+				Log.Info("channel {0}@{1} does not exist.");
+				return CommandResult.InvalidArgument;
+			}
 
-	        Send.Internal_ChannelShutdown(channel, time);
-            return CommandResult.Okay;
-        }
+			Send.Internal_ChannelShutdown(channel, time);
+			return CommandResult.Okay;
+		}
 	}
 }

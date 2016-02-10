@@ -248,7 +248,7 @@ namespace Aura.Channel
 		{
 			int logoffOffset = 30;
 
-			if (_shutdownTimer != null && _shutdownTimer.Enabled)
+			if (this._shutdownTimer != null && this._shutdownTimer.Enabled)
 				return ShutdownResult.AlreadyInProgress;
 
 			var channel = this.ServerList.GetChannel(this.Conf.Channel.ChannelServer, this.Conf.Channel.ChannelName);
@@ -266,11 +266,27 @@ namespace Aura.Channel
 			this.IsInMaintenance = true;
 			Log.Info("Switched to maintenance.");
 
-			_shutdownTimer = new System.Timers.Timer(time * 1000);
+			try
+			{
+				this._shutdownTimer = new System.Timers.Timer(time*1000);
+			}
+			catch (ArgumentException ex)
+			{
+				Log.Error(ex.Message);
+				return ShutdownResult.Fail;
+			}
 
-			_shutdownTimer.Elapsed += ShutdownTimerOnElapsed;
+			this._shutdownTimer.Elapsed += this.ShutdownTimerOnElapsed;
 
-			_shutdownTimer.Start();
+			try
+			{
+				this._shutdownTimer.Start();
+			}
+			catch (ArgumentOutOfRangeException ex)
+			{
+				Log.Error(ex.Message);
+				return ShutdownResult.Fail;
+			}
 
 			// Disconnect a little earlier
 			Send.RequestClientDisconnect(time - logoffOffset);
