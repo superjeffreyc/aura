@@ -244,43 +244,41 @@ namespace Aura.Channel
 			Log.WriteLine();
 		}
 
+        /// <summary>
+        /// Attempts to start a shutdown sequence for the server
+        /// </summary>
+        /// <param name="time">The amount of time in seconds the server should wait before shutting down</param>
+        /// <returns></returns>
 		public ShutdownResult Shutdown(int time)
 		{
-			int logoffOffset = 30;
+			var disconnectOffset = 30;
 
-			if (this._shutdownTimer != null && this._shutdownTimer.Enabled)
+            var channel = this.ServerList.GetChannel(this.Conf.Channel.ChannelServer, this.Conf.Channel.ChannelName);
+
+            if (channel == null)
+            {
+                Log.Warning("Attempted to shutdown unregistered channel.");
+                return ShutdownResult.Fail;
+            }
+
+            if (_shutdownTimer != null && _shutdownTimer.Enabled)
 				return ShutdownResult.AlreadyInProgress;
 
-			var channel = this.ServerList.GetChannel(this.Conf.Channel.ChannelServer, this.Conf.Channel.ChannelName);
+            try
+            {
+                _shutdownTimer = new System.Timers.Timer(time * 1000);
+            }
+            catch (ArgumentException ex)
+            {
+                Log.Error(ex.Message);
+                return ShutdownResult.Fail;
+            }
 
-			if (channel == null)
-			{
-				Log.Warning("Attempted to shutdown unregistered channel.");
-				return ShutdownResult.Fail;
-			}
-
-			Send.Notice(NoticeType.TopRed, 
-				Localization.Get("Channel will shut down in {0} seconds, please log off as soon as possible."), time);
-
-			// Sets ChannelState to Maint and notifies LoginServer
-			this.IsInMaintenance = true;
-			Log.Info("Switched to maintenance.");
+            _shutdownTimer.Elapsed += this.ShutdownTimerOnElapsed;
 
 			try
 			{
-				this._shutdownTimer = new System.Timers.Timer(time*1000);
-			}
-			catch (ArgumentException ex)
-			{
-				Log.Error(ex.Message);
-				return ShutdownResult.Fail;
-			}
-
-			this._shutdownTimer.Elapsed += this.ShutdownTimerOnElapsed;
-
-			try
-			{
-				this._shutdownTimer.Start();
+				_shutdownTimer.Start();
 			}
 			catch (ArgumentOutOfRangeException ex)
 			{
@@ -288,8 +286,15 @@ namespace Aura.Channel
 				return ShutdownResult.Fail;
 			}
 
-			// Disconnect a little earlier
-			Send.RequestClientDisconnect(time - logoffOffset);
+            Send.Notice(NoticeType.TopRed,
+                Localization.Get("Channel will shut down in {0} seconds, please log off as soon as possible."), time);
+
+            // Sets ChannelState to Maint and notifies LoginServer
+            this.IsInMaintenance = true;
+            Log.Info("Switched to maintenance.");
+
+            // Disconnect a little earlier
+            Send.RequestClientDisconnect(time - disconnectOffset);
 
 			Log.Info("Shutting down in {0} seconds...", time);
 

@@ -43,6 +43,10 @@ namespace Aura.Channel.Network.Sending
 			client.Send(packet);
 		}
 
+        /// <summary>
+        /// Sends an automatic disconnect request to the client
+        /// </summary>
+        /// <param name="seconds">The amount of time in seconds the client should wait before disconnecting</param>
 		public static void RequestClientDisconnect(int seconds)
 		{
 			ChannelServer.Instance.World.Broadcast(
