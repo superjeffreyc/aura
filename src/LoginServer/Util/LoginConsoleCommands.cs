@@ -64,6 +64,9 @@ namespace Aura.Login.Util
 
 		private CommandResult HandleShutDown(string command, IList<string> args)
 		{
+			if (args.Count < 2)
+				return CommandResult.InvalidArgument;
+
 			var time = 60;
 
 			if (args.Count == 3)
