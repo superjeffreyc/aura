@@ -131,8 +131,6 @@ namespace Aura.Channel
 			if (this.IsRunning)
 				throw new Exception("Server is already running.");
 
-			this.IsInMaintenance = true;
-
 			CliUtil.WriteHeader("Channel Server", ConsoleColor.DarkGreen);
 			CliUtil.LoadingTitle();
 
