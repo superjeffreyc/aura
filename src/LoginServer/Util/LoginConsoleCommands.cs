@@ -64,12 +64,12 @@ namespace Aura.Login.Util
 
 		private CommandResult HandleShutDown(string command, IList<string> args)
 		{
-			if (args.Count < 3)
+			if (args.Count > 3)
 				return CommandResult.InvalidArgument;
 
 			var time = 60;
 
-			if (args.Count == 3)
+			if (args.Count > 2)
 			{
 				int.TryParse(args[2], out time);
 			}
@@ -89,7 +89,7 @@ namespace Aura.Login.Util
 			var channel = LoginServer.Instance.ChannelClients.FirstOrDefault(c => c.Account.Name == channelFullName);
 			if (channel == null)
 			{
-				Log.Info("channel {0}@{1} does not exist.");
+				Log.Info("channel {0} does not exist.", channelFullName);
 				return CommandResult.InvalidArgument;
 			}
 
