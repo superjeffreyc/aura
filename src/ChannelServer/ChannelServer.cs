@@ -37,16 +37,10 @@ namespace Aura.Channel
 
 		private System.Timers.Timer _shutdownTimer = null;
 
-		private bool _isRunning = false;
-
 		/// <summary>
 		/// Used to determine if the server is running
 		/// </summary>
-		public bool IsRunning
-		{
-			get { return _isRunning; }
-			private set { _isRunning = value; }
-		}
+		public bool IsRunning { get; private set; } = false;
 
 		private bool _isInMaintenance = false;
 

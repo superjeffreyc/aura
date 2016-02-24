@@ -2116,7 +2116,7 @@ namespace Aura.Channel.Util
 		{
 			var time = 60;
 
-			if (args.Count == 2)
+			if (args.Count < 1)
 				int.TryParse(args[1], out time);
 
 			var result = ChannelServer.Instance.Shutdown(time);

@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Aura development team - Licensed under GNU GPL
 // For more information, see license file in the main folder
 
+using System;
 using Aura.Mabi.Network;
 using Aura.Shared.Network;
 using Aura.Shared.Util;
@@ -35,7 +36,6 @@ namespace Aura.Channel.Network.Sending
 			packet.PutInt(ChannelServer.Instance.Conf.Channel.ChannelPort);
 			packet.PutInt(cur);
 			packet.PutInt(max);
-
 			packet.PutInt((int)GetServerState(cur, max));
 
 			ChannelServer.Instance.LoginServer.Send(packet);
@@ -57,9 +57,21 @@ namespace Aura.Channel.Network.Sending
 				// In case we do support the booting channel state
 				return ChannelServer.Instance.IsRunning ? ChannelState.Maintenance : ChannelState.Booting;
 
-			var stress = (current / max) * 100;
+			double stress;
 
-			if (stress > 40 && stress <= 70)
+			try
+			{
+				stress = (current/max)*100;
+			}
+			catch (Exception ex)
+			{
+				Log.Exception(ex, "Error occured when calculating server stress, falling back to Normal.");
+
+				// Fallback value
+				return ChannelState.Normal;
+			}
+
+			if (stress >= 40 && stress <= 70)
 				return ChannelState.Busy;
 			if (stress > 70 && stress <= 95)
 				return ChannelState.Full;
