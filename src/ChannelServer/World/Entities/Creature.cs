@@ -157,6 +157,16 @@ namespace Aura.Channel.World.Entities
 		public DateTime LastRebirth { get; set; }
 
 		/// <summary>
+		/// Time of last aging.
+		/// </summary>
+		public DateTime LastAging { get; set; }
+
+		/// <summary>
+		/// Time of last login.
+		/// </summary>
+		public DateTime LastLogin { get; set; }
+
+		/// <summary>
 		/// How many times the character rebirthed.
 		/// </summary>
 		public int RebirthCount { get; set; }
@@ -1185,6 +1195,16 @@ namespace Aura.Channel.World.Entities
 		}
 
 		/// <summary>
+		/// Stops movement and resets creature to the given position.
+		/// </summary>
+		/// <param name="pos"></param>
+		public void ResetPosition(Position pos)
+		{
+			this.SetPosition(pos.X, pos.Y);
+			Send.SetLocation(this, pos.X, pos.Y);
+		}
+
+		/// <summary>
 		/// Warps creature to target location,
 		/// returns false if warp is unsuccessful.
 		/// </summary>
@@ -1880,6 +1900,8 @@ namespace Aura.Channel.World.Entities
 				item.Drop(this.Region, pos, Item.DropRadius, killer, false);
 
 			this.Drops.ClearStaticDrops();
+
+			this.DeadMenu.Update();
 		}
 
 		/// <summary>
@@ -1895,7 +1917,7 @@ namespace Aura.Channel.World.Entities
 			{
 				if ((levelStats = AuraData.StatsLevelUpDb.Find(10000, 17)) == null)
 				{
-					Log.Error("Creature.GiveExp: No valid level up stats found for race {0}, age {1}. Canceling.", this.RaceId, this.Age);
+					Log.Error("Creature.GiveExp: No valid level up stats found for race {0}, age {1}.", this.RaceId, this.Age);
 				}
 				else
 				{
@@ -1926,7 +1948,7 @@ namespace Aura.Channel.World.Entities
 				if (levelStats == null)
 					continue;
 
-				this.AbilityPoints += (short)levelStats.AP;
+				this.AbilityPoints += (short)Math2.Clamp(0, short.MaxValue, levelStats.AP * ChannelServer.Instance.Conf.World.LevelApRate);
 				this.LifeMaxBase += levelStats.Life;
 				this.ManaMaxBase += levelStats.Mana;
 				this.StaminaMaxBase += levelStats.Stamina;
@@ -1963,6 +1985,89 @@ namespace Aura.Channel.World.Entities
 			}
 			else
 				Send.StatUpdate(this, StatUpdateType.Private, Stat.Experience);
+		}
+
+		/// <summary>
+		/// Increases age by years and sends update packets.
+		/// </summary>
+		/// <param name="years"></param>
+		public void AgeUp(short years)
+		{
+			if (years < 0 || this.Age + years > short.MaxValue)
+				return;
+
+			float life = 0, mana = 0, stamina = 0, str = 0, dex = 0, int_ = 0, will = 0, luck = 0;
+			var ap = 0;
+
+			var newAge = this.Age + years;
+			while (this.Age < newAge)
+			{
+				// Increase age before requestin statUp, we want the stats
+				// for the next age.
+				this.Age++;
+
+				var statUp = AuraData.StatsAgeUpDb.Find(this.RaceId, this.Age);
+				if (statUp == null)
+				{
+					if ((statUp = AuraData.StatsAgeUpDb.Find(10000, 17)) == null)
+					{
+						Log.Error("Creature.AgeUp: No valid age up stats found for race {0}, age {1}.", this.RaceId, this.Age);
+					}
+					else
+					{
+						// Only warn when creature was a player, we'll let NPCs fall
+						// back to Human 17 silently.
+						if (this.IsPlayer)
+							Log.Warning("Creature.AgeUp: Age up stats missing for race {0}, age {1}. Falling back to Human 17.", this.RaceId, this.Age);
+					}
+				}
+
+				// Collect bonuses for multi aging
+				life += statUp.Life;
+				mana += statUp.Mana;
+				stamina += statUp.Stamina;
+				str += statUp.Str;
+				dex += statUp.Dex;
+				int_ += statUp.Int;
+				will += statUp.Will;
+				luck += statUp.Luck;
+				ap += statUp.AP;
+			}
+
+			// Apply stat bonuses
+			this.LifeMaxBase += life;
+			this.Life += life;
+			this.ManaMaxBase += mana;
+			this.Mana += mana;
+			this.StaminaMaxBase += stamina;
+			this.Stamina += stamina;
+			this.StrBase += str;
+			this.DexBase += dex;
+			this.IntBase += int_;
+			this.WillBase += will;
+			this.LuckBase += luck;
+			this.AbilityPoints += (short)Math2.Clamp(0, short.MaxValue, ap * ChannelServer.Instance.Conf.World.AgeApRate);
+
+			this.LastAging = DateTime.Now;
+
+			if (this is Character)
+				this.Height = Math.Min(1.0f, 1.0f / 7.0f * (this.Age - 10.0f)); // 0 ~ 1.0
+
+			// Send stat bonuses
+			if (life != 0) Send.SimpleAcquireInfo(this, "life", mana);
+			if (mana != 0) Send.SimpleAcquireInfo(this, "mana", mana);
+			if (stamina != 0) Send.SimpleAcquireInfo(this, "stamina", stamina);
+			if (str != 0) Send.SimpleAcquireInfo(this, "str", str);
+			if (dex != 0) Send.SimpleAcquireInfo(this, "dex", dex);
+			if (int_ != 0) Send.SimpleAcquireInfo(this, "int", int_);
+			if (will != 0) Send.SimpleAcquireInfo(this, "will", will);
+			if (luck != 0) Send.SimpleAcquireInfo(this, "luck", luck);
+			if (ap != 0) Send.SimpleAcquireInfo(this, "ap", ap);
+
+			Send.StatUpdateDefault(this);
+
+			// XXX: Replace with effect and notice to allow something to happen past age 25?
+			Send.AgeUpEffect(this, this.Age);
 		}
 
 		/// <summary>
@@ -2022,6 +2127,23 @@ namespace Aura.Channel.World.Entities
 			if (!this.IsDead)
 				return;
 
+			// Get and check exp penalty
+			// "Here" wil be disabled by the client if not enough exp are
+			// available, nothing else though, so we send an error message
+			// if creature doesn't have enough exp, instead of issuing a
+			// warning.
+			var expPenalty = this.DeadMenu.GetExpPenalty(this.Level, option);
+			var minExp = AuraData.ExpDb.GetTotalForNextLevel(this.Level - 2);
+
+			if (this.Exp - expPenalty < minExp)
+			{
+				// Unofficial
+				Send.Notice(this, NoticeType.MiddleSystem, Localization.Get("Insufficient EXP."));
+				Send.DeadFeather(this);
+				Send.Revived(this);
+				return;
+			}
+
 			switch (option)
 			{
 				case ReviveOptions.Town:
@@ -2067,10 +2189,49 @@ namespace Aura.Channel.World.Entities
 					this.Life = this.LifeMax * 0.25f;
 					break;
 
-				case ReviveOptions.WaitForRescue:
+				case ReviveOptions.PhoenixFeather:
 					// 10% additional injuries
 					this.Injuries += this.LifeInjured * 0.10f;
 					this.Life = 1;
+					break;
+
+				case ReviveOptions.WaitForRescue:
+					this.DeadMenu.Options ^= ReviveOptions.PhoenixFeather;
+					Send.DeadFeather(this);
+					Send.Revived(this);
+					return;
+
+				case ReviveOptions.NaoStone:
+					this.DeadMenu.Options = ReviveOptions.NaoStoneRevive;
+					Send.DeadFeather(this);
+					Send.NaoRevivalEntrance(this);
+					Send.Revived(this);
+					return;
+
+				case ReviveOptions.NaoStoneRevive:
+					// First try beginner stones, then normals
+					var item = this.Inventory.GetItem(a => a.HasTag("/notTransServer/nao_coupon/"), StartAt.BottomRight);
+					if (item == null)
+					{
+						item = this.Inventory.GetItem(a => a.HasTag("/nao_coupon/"), StartAt.BottomRight);
+						if (item == null)
+						{
+							Log.Error("Creature.Revive: Unable to remove Nao Soul Stone, none found.");
+							return;
+						}
+					}
+
+					// 100% life and 100% injury recovery
+					this.Injuries = 0;
+					this.Life = this.LifeMax;
+
+					// Blessing of all items
+					this.BlessAll();
+
+					// Remove Soul Stone
+					this.Inventory.Decrement(item);
+
+					Send.NaoRevivalExit(this);
 					break;
 
 				default:
@@ -2083,12 +2244,19 @@ namespace Aura.Channel.World.Entities
 			}
 
 			this.Deactivate(CreatureStates.Dead);
+			this.DeadMenu.Clear();
+
+			if (expPenalty != 0)
+			{
+				this.Exp = Math.Max(minExp, this.Exp - expPenalty);
+				Send.StatUpdate(this, StatUpdateType.Private, Stat.Experience);
+			}
 
 			Send.RemoveDeathScreen(this);
 			Send.StatUpdate(this, StatUpdateType.Private, Stat.Life, Stat.LifeInjured, Stat.LifeMax, Stat.LifeMaxMod, Stat.Stamina, Stat.Hunger);
 			Send.StatUpdate(this, StatUpdateType.Public, Stat.Life, Stat.LifeInjured, Stat.LifeMax, Stat.LifeMaxMod);
 			Send.RiseFromTheDead(this);
-			//Send.DeadFeather(creature);
+			Send.DeadFeather(this);
 			Send.Revived(this);
 		}
 
@@ -2234,11 +2402,11 @@ namespace Aura.Channel.World.Entities
 		/// Returns targetable creatures in given range around creature.
 		/// </summary>
 		/// <param name="range">Radius around position.</param>
-		/// <param name="addAttackRange">Factor in attack range?</param>
+		/// <param name="options">Options to change the result.</param>
 		/// <returns></returns>
-		public ICollection<Creature> GetTargetableCreaturesInRange(int range, bool addAttackRange)
+		public ICollection<Creature> GetTargetableCreaturesInRange(int range, TargetableOptions options = TargetableOptions.None)
 		{
-			return this.GetTargetableCreaturesAround(this.GetPosition(), range, addAttackRange);
+			return this.GetTargetableCreaturesAround(this.GetPosition(), range, options);
 		}
 
 		/// <summary>
@@ -2247,15 +2415,15 @@ namespace Aura.Channel.World.Entities
 		/// </summary>
 		/// <param name="position">Reference position.</param>
 		/// <param name="range">Radius around position.</param>
-		/// <param name="addAttackRange">Factor in attack range?</param>
+		/// <param name="options">Options to change the result.</param>
 		/// <returns></returns>
-		public ICollection<Creature> GetTargetableCreaturesAround(Position position, int range, bool addAttackRange)
+		public ICollection<Creature> GetTargetableCreaturesAround(Position position, int range, TargetableOptions options = TargetableOptions.None)
 		{
 			var targetable = this.Region.GetCreatures(target =>
 			{
 				var targetPos = target.GetPosition();
 				var radius = range;
-				if (addAttackRange)
+				if ((options & TargetableOptions.AddAttackRange) != 0)
 				{
 					// This is unofficial, the target's "hitbox" should be
 					// factored in, but the total attack range is too much.
@@ -2267,7 +2435,7 @@ namespace Aura.Channel.World.Entities
 					&& this.CanTarget(target) // Check targetability
 					&& ((!this.Has(CreatureStates.Npc) || !target.Has(CreatureStates.Npc)) || this.Target == target) // Allow NPC on NPC only if it's the creature's target
 					&& targetPos.InRange(position, radius) // Check range
-					&& !this.Region.Collisions.Any(position, targetPos) // Check collisions between position
+					&& (((options & TargetableOptions.IgnoreWalls) != 0) || !this.Region.Collisions.Any(position, targetPos)) // Check collisions between positions
 					&& !target.Conditions.Has(ConditionsA.Invisible); // Check visiblility (GM)
 			});
 
@@ -2303,6 +2471,16 @@ namespace Aura.Channel.World.Entities
 			var x = pos.X - creaturePos.X;
 			var y = pos.Y - creaturePos.Y;
 
+			this.TurnTo(x, y);
+		}
+
+		/// <summary>
+		/// Turns creature in given direction.
+		/// </summary>
+		/// <param name="x"></param>
+		/// <param name="y"></param>
+		public void TurnTo(float x, float y)
+		{
 			this.Direction = MabiMath.DirectionToByte(x, y);
 			Send.TurnTo(this, x, y);
 		}
@@ -2717,5 +2895,32 @@ namespace Aura.Channel.World.Entities
 
 			return 1f + (result / 9f);
 		}
+
+		/// <summary>
+		/// Blesses all main equip items and updates client.
+		/// </summary>
+		public void BlessAll()
+		{
+			foreach (var item in this.Inventory.GetMainEquipment())
+			{
+				item.OptionInfo.Flags |= ItemFlags.Blessed;
+				Send.ItemBlessed(this, item);
+			}
+		}
+	}
+
+	public enum TargetableOptions
+	{
+		None,
+
+		/// <summary>
+		/// Adds attack range of creature to the given range.
+		/// </summary>
+		AddAttackRange,
+
+		/// <summary>
+		/// Ignores collision lines between creature and potential targets.
+		/// </summary>
+		IgnoreWalls,
 	}
 }

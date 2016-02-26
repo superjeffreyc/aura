@@ -44,6 +44,16 @@ namespace Aura.Channel.Network.Sending
 		}
 
 		/// <summary>
+		/// Sends an automatic disconnect request to the client
+		/// </summary>
+		/// <param name="seconds">The amount of time in seconds the client should wait before disconnecting</param>
+		public static void RequestClientDisconnect(int seconds)
+		{
+			ChannelServer.Instance.World.Broadcast(
+					new Packet(Op.RequestClientDisconnect, MabiId.Channel).PutInt(seconds * 1000));
+		}
+
+		/// <summary>
 		/// Sends SpecialLogin to creature's client.
 		/// </summary>
 		/// <remarks>

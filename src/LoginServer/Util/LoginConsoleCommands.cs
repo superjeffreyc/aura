@@ -2,7 +2,9 @@
 // For more information, see license file in the main folder
 
 using System.Collections.Generic;
+using System.Linq;
 using Aura.Login.Database;
+using Aura.Login.Network;
 using Aura.Shared.Util;
 using Aura.Shared.Util.Commands;
 
@@ -12,16 +14,9 @@ namespace Aura.Login.Util
 	{
 		public LoginConsoleCommands()
 		{
-			this.Add("shutdown", "Orders all servers to shut down", HandleShutDown);
+			this.Add("shutdown", "<serverFullName|*> [timeInSeconds]", "Shuts down a single or all channels", HandleShutDown);
 			this.Add("auth", "<account> <level>", "Changes authority level of account", HandleAuth);
 			this.Add("passwd", "<account> <password>", "Changes password of account", HandlePasswd);
-		}
-
-		private CommandResult HandleShutDown(string command, IList<string> args)
-		{
-			Log.Info("(Unimplemented)");
-
-			return CommandResult.Okay;
 		}
 
 		private CommandResult HandleAuth(string command, IList<string> args)
@@ -64,6 +59,41 @@ namespace Aura.Login.Util
 
 			Log.Info("Password change for {0} complete.", accountName);
 
+			return CommandResult.Okay;
+		}
+
+		private CommandResult HandleShutDown(string command, IList<string> args)
+		{
+			if (args.Count > 3)
+				return CommandResult.InvalidArgument;
+
+			var time = 60;
+
+			if (args.Count > 2)
+			{
+				int.TryParse(args[2], out time);
+			}
+				
+			var channelFullName = args[1];
+
+			if (channelFullName == "*")
+			{
+				foreach (var channelClient in LoginServer.Instance.ChannelClients)
+				{
+					Send.Internal_ChannelShutdown(channelClient, time);
+				}
+
+				return CommandResult.Okay;
+			}
+
+			var channel = LoginServer.Instance.ChannelClients.FirstOrDefault(c => c.Account.Name == channelFullName);
+			if (channel == null)
+			{
+				Log.Info("channel {0} does not exist.", channelFullName);
+				return CommandResult.InvalidArgument;
+			}
+
+			Send.Internal_ChannelShutdown(channel, time);
 			return CommandResult.Okay;
 		}
 	}

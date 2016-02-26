@@ -152,6 +152,14 @@ public class RanaldBaseScript : NpcScript
 				Msg("I could show you a demonstration right now and teach you this skill, but... I'll probably break you in half.<br/>You should go to Trefor instead and ask him to show you the Counterattack skill.<br/>It would be a lot safer for you. Go now.<br/>");
 				break;
 
+			case "skill_range":
+				GiveKeyword("bow");
+				RemoveKeyword("skill_range");
+				Msg("Long range attacks? Hmm... Desire alone doesn't cut it.<br/>You'll also need to be equipped with an appropriate weapon.<br/>There are a number of long range weapons, but go get a bow first.");
+				Msg("Just use it a couple of times.<br/>You won't need any help from others in understanding the basics.");
+				Msg("If you practice a few times and get to know about the Ranged Attack skill,<br/>it means you're doing your job. Ferghus is usually the source for weapons in this town,<br/>so go see him at the Blacksmith's Shop.");
+				break;
+
 			case "skill_magnum_shot":
 				Msg("Oh... You already know about that? I only gave you a brief summary about the Ranged Attack, and you already picked up that much! Quite impressive! Alright! Let's move on then!");
 				Msg("Magnum Shot skill helps you to shoot a powerful blow with the power you have concentrated in the bow.<br/>Go on and work on the training.");
@@ -304,9 +312,9 @@ public class RanaldShop : NpcShopScript
 		Add("Arena", 63019, 100); // Alby Battle Arena Coin 100x
 
 		// Quest
-		Add("Quest", 70023, 1, 0); // [collect 10 Branches]
-		Add("Quest", 70023, 1, 0); // [collect 10 Berries]
-		Add("Quest", 70023, 1, 0); // [collect 10 Large Nails]
+		//AddQuest("Quest", InsertQuestId, 0); // [collect 10 Branches]
+		//AddQuest("Quest", InsertQuestId, 0); // [collect 10 Berries]
+		//AddQuest("Quest", InsertQuestId, 0); // [collect 10 Large Nails]
 
 		// Reference Book
 		Add("Reference Book", 1078); // Don't give up!

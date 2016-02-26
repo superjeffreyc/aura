@@ -84,6 +84,16 @@ namespace Aura.Channel.Network.Handlers
 			}
 		}
 
+		[PacketHandler(Op.Internal.ChannelShutdown)]
+		public void Internal_ChannelShutdown(ChannelClient client, Packet packet)
+		{
+			var time = packet.GetInt();
+
+			var result = ChannelServer.Instance.Shutdown(time);
+
+			Send.Internal_ChannelShutdownR(client, result);
+		}
+
 		/// <summary>
 		/// Sent to all connected clients by the login server,
 		/// message to broadcast

@@ -89,6 +89,28 @@ namespace Aura.Login.Network.Handlers
 			Send.Internal_ChannelStatus(LoginServer.Instance.ServerList.List);
 		}
 
+		[PacketHandler(Op.Internal.ChannelShutdownR)]
+		public void Internal_ChannelShutdownR(LoginClient client, Packet packet)
+		{
+			var result = (ShutdownResult) packet.GetByte();
+
+			switch (result)
+			{
+				case ShutdownResult.Success:
+					Log.Info("{0}\r\n\tShutdown request: Success.", client.Account.Name);
+					break;
+				case ShutdownResult.AlreadyInProgress:
+					Log.Info("{0}\r\n\t Shutdown request: Already in progress.", client.Account.Name);
+					break;
+				case ShutdownResult.Fail:
+					Log.Info("{0}\r\n\t Shutdown request: Failed.", client.Account.Name);
+					break;
+				default:
+					Log.Info("{0}\r\n\t Shutdown request: Unknown response.", client.Account.Name);
+					break;
+			}
+		}
+
 		/// <summary>
 		/// Sent from channels to forward it to all others,
 		/// message to broadcast
